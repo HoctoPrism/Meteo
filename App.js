@@ -25,10 +25,10 @@ import {Colors} from 'react-native/Libraries/NewAppScreen';
 import axios from 'axios';
 
 const App: () => Node = () => {
-  const [data, setData] = useState(null); // array of data
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [modalVisible, setModalVisible] = useState(false);
   const [city, setCity] = useState(undefined);
+  const [cities, setCities] = useState(undefined);
 
   const isDarkMode = useColorScheme() === 'dark';
 
@@ -36,12 +36,50 @@ const App: () => Node = () => {
     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
   };
 
-  useEffect(() => {}, []);
+  const getCitySearch = async value => {
+    try {
+      if (value.length >= 3) {
+        let res = await axios.get(
+          `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURI(
+            value,
+          )}&type=city&limit=3&format=json&apiKey=e7e8b57d0e91492ab555a084abd37c4c`,
+          {
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+          },
+        );
+        if (res.status === 200) {
+          let dirtyArray = res.data.results;
+          let storedArray = [];
+          dirtyArray.map(item => {
+            storedArray = [
+              ...storedArray,
+              {
+                name: item.city,
+                lat: item.lat,
+                lon: item.lon,
+                state: item.state,
+                country_code: item.country_code,
+                country: item.country,
+                id: `${item.city}, ${item.state}`,
+              },
+            ];
+          });
+          setCities(storedArray);
+        }
+      } else {
+        console.error('une erreur est survenue');
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
-  const getMeteoFromApi = async () => {
+  const getMeteoFromApi = async item => {
     try {
       let res = await axios.get(
-        `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=362f995a4976e6b570a29faf4b9558cd&units=metric&lang=fr`,
+        `https://api.openweathermap.org/data/2.5/weather?q=${item.name},${item.country_code},${item.state}&appid=362f995a4976e6b570a29faf4b9558cd&units=metric&lang=fr`,
         {
           headers: {
             'X-Requested-With': 'XMLHttpRequest',
@@ -49,7 +87,8 @@ const App: () => Node = () => {
         },
       );
       if (res.status === 200) {
-        setData(res.data);
+        await setData(res.data);
+        setCities(undefined);
         setLoading(false);
       } else {
         console.error('une erreur est survenue');
@@ -68,13 +107,28 @@ const App: () => Node = () => {
         <View style={styles.viewMeteo}>
           <TextInput
             style={styles.input}
-            onChangeText={setCity}
+            onChangeText={value => {
+              getCitySearch(value);
+            }}
             value={city}
             placeholder="Veuillez saisir le nom d'une ville"
           />
-          <Pressable style={styles.buttonSubmit} onPress={getMeteoFromApi}>
-            <Text>Envoyer</Text>
-          </Pressable>
+          {cities !== undefined ? (
+            cities.map(item => {
+              return (
+                <Pressable
+                  key={item.name + item.lat}
+                  style={styles.buttonSubmit}
+                  onPressOut={() => getMeteoFromApi(item)}>
+                  <Text style={{color: '#fff'}}>
+                    {item.name} - {item.state} - {item.country}
+                  </Text>
+                </Pressable>
+              );
+            })
+          ) : (
+            <Text />
+          )}
           {loading ? (
             <Text />
           ) : (
@@ -122,14 +176,11 @@ const styles = StyleSheet.create({
     paddingStart: 15,
   },
   buttonSubmit: {
-    width: '30%',
+    width: '90%',
     borderRadius: 5,
     marginTop: 5,
-    backgroundColor: '#8fdee1',
+    backgroundColor: '#5b738f',
     padding: 10,
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   iconBlock: {
     marginVertical: 35,
