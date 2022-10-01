@@ -6,10 +6,9 @@
  * @flow strict-local
  */
 
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import type {Node} from 'react';
 import {
-  Button,
   Image,
   Pressable,
   SafeAreaView,
@@ -109,29 +108,26 @@ const App: () => Node = () => {
             style={styles.input}
             onChangeText={value => {
               getCitySearch(value);
+              setLoading(true);
             }}
             value={city}
             placeholder="Veuillez saisir le nom d'une ville"
           />
-          {cities !== undefined ? (
-            cities.map(item => {
-              return (
-                <Pressable
-                  key={item.name + item.lat}
-                  style={styles.buttonSubmit}
-                  onPressOut={() => getMeteoFromApi(item)}>
-                  <Text style={{color: '#fff'}}>
-                    {item.name} - {item.state} - {item.country}
-                  </Text>
-                </Pressable>
-              );
-            })
-          ) : (
-            <Text />
-          )}
-          {loading ? (
-            <Text />
-          ) : (
+          {cities !== undefined
+            ? cities.map(item => {
+                return (
+                  <Pressable
+                    key={item.name + item.lat}
+                    style={styles.buttonSubmit}
+                    onPress={() => getMeteoFromApi(item)}>
+                    <Text style={{color: '#fff'}}>
+                      {item.name} - {item.state} - {item.country}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            : null}
+          {loading ? null : (
             <View>
               <Text style={styles.city}>{data?.name}</Text>
               <Text>Température actuelle : {data?.main?.temp}°C</Text>
